@@ -2,3 +2,5 @@ cryptography==50.0.2
 mysql-connector-python==26.10.0
 openpyxl==3.1.5
 python-dotenv==1.2.4
+# Time zone data for zoneinfo (Asia/Jakarta). Windows has no built-in IANA time zone database.
+tzdata==2026.3

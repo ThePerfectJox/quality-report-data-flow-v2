@@ -1,10 +1,18 @@
-"""Runs the TCP client: sends a message to the server over TLS and prints its JSON response.
+"""Runs the TCP client: sends a message to the server over TLS, prints its JSON response,
+and appends the report to the Excel database.
 
 Usage: python src/run_client.py [server-ip] [message]
 """
 
 import sys
+import json
+import logging
 
+from append_data_to_excel_database import (
+    AppendDatabaseError,
+    ArchiveCreationError,
+    append_response_to_database,
+)
 from client.tcp_client import ClientBindIpError, send_request
 from shared.address import format_address
 from shared.json_serialization import to_json
@@ -30,6 +38,8 @@ def get_message() -> str:
 def main():
     # Print any character safely, even if the output is redirected to a limited encoding.
     sys.stdout.reconfigure(errors="backslashreplace")
+    # Shows the progress messages of the Excel database append.
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
     try:
         tls_context = create_client_tls_context()
@@ -47,8 +57,18 @@ def main():
     except OSError as error:
         sys.exit(f"The request to {format_address(server_host, SERVER_PORT)} failed: {error}")
 
-    print(f"Received:\n{to_json(response, indent=2)}")
+    print(f"Received:\n{to_json(response, indent=4)}")
+    # Saved before the append, so the response isn't lost if the append fails.
+    with open("test-response.json","w") as file:
+        json.dump(response,file,indent=4)
     print("Connection closed")
+
+    try:
+        append_response_to_database(response)
+    except ArchiveCreationError as error:
+        sys.exit(str(error))
+    except AppendDatabaseError as error:
+        sys.exit(f"Nothing was written to the Excel database: {error}")
 
 
 if __name__ == "__main__":

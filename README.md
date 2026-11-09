@@ -13,11 +13,13 @@ Server device:
 python -m pip install -r requirements.txt
 ```
 
-Client device, which only needs this one package:
+Client device, which only needs these packages:
 
 ```powershell
-python -m pip install python-dotenv==1.2.4
+python -m pip install python-dotenv==1.2.4 openpyxl==3.1.5 tzdata==2026.3
 ```
+
+`openpyxl` and `tzdata` are only needed to append the report to the Excel database.
 
 ## Run
 
@@ -27,6 +29,40 @@ python src/run_client.py [server-ip] [message]
 ```
 
 On its first run, the server creates its TLS certificate in `certs/`.
+
+## Append the report to the Excel database
+
+`run_client.py` appends the server's response to the Excel database as soon as it receives it.
+To append a saved report JSON file instead, run:
+
+```powershell
+python src/append_data_to_excel_database.py
+```
+
+It needs these settings:
+
+| Where | Setting | Purpose |
+| --- | --- | --- |
+| `.env` | `REPORT_JSON_PATH` | The report JSON file. Only needed by `append_data_to_excel_database.py` on its own |
+| `.env` | `EXCEL_DATABASE_PATH` | The workbook holding the database Excel Table. It must already exist |
+| `.env` | `EXCEL_DATABASE_SHEET`, `EXCEL_DATABASE_TABLE` | The worksheet and table. Needed only when the workbook has more than one table |
+| `client-config.json` | `PLANT`, `LOKASI`, `GROUP`, `BRAND`, `BAGIAN` | This device's metadata, written to every row |
+| `client-config.json` | `SET_SAMPLE_THRESHOLD` | `HH:MM` in Asia/Jakarta time. A report submitted after it is Set Sample 2, otherwise 1. Exactly at the threshold is 1 |
+
+Copy `client-config.json.example` to `client-config.json` and fill in the device's values.
+Relative paths are taken from the project folder. Close the workbook in Excel before running.
+
+Each run also writes an archive next to the workbook, at
+`archived-<PLANT>/<ISO year>/<ISO week>/<yy_mm_dd_set-sample_counter>.xlsx`, for example
+`archived-RK1/2026/45/26_11_06_2_001.xlsx`. The counter starts at 001 for each date and
+Set Sample, and goes up by one with each archive. A report whose samples are
+already in the table is rejected, so running the script twice doesn't add rows twice.
+
+Run the tests with:
+
+```powershell
+python -m unittest discover -s tests -v
+```
 
 ## Network settings
 
