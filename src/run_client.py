@@ -56,11 +56,6 @@ def main():
         sys.exit(f"Could not complete the request: {error}")
     except OSError as error:
         sys.exit(f"The request to {format_address(server_host, SERVER_PORT)} failed: {error}")
-
-    print(f"Received:\n{to_json(response, indent=4)}")
-    # Saved before the append, so the response isn't lost if the append fails.
-    with open("test-response.json","w") as file:
-        json.dump(response,file,indent=4)
     print("Connection closed")
 
     try:
@@ -70,6 +65,8 @@ def main():
     except AppendDatabaseError as error:
         sys.exit(f"Nothing was written to the Excel database: {error}")
 
+    print("Success...")
+    print("Report received, and appended")
 
 if __name__ == "__main__":
     main()
