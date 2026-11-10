@@ -11,12 +11,12 @@ from pathlib import Path
 from managers.mysql_manager import MySqlManager
 from shared.json_serialization import from_json, to_json
 
+COLUMN_TIMESTAMP_KEYS = "End"
 LAST_REPORT_SENT_FILE = Path(__file__).resolve().parents[2] / "last_report_sent.json"
-
-SAMPLE_COLUMNS = "id, name, sample_date, quantity, score, is_passed, checked_at"
-SELECT_ALL_SAMPLES_QUERY = f"SELECT {SAMPLE_COLUMNS} FROM samples ORDER BY sample_date, id"
+SAMPLE_COLUMNS = "*"
+SELECT_ALL_SAMPLES_QUERY = f"SELECT {SAMPLE_COLUMNS} FROM summary_report;"
 SELECT_NEW_SAMPLES_QUERY = (
-    f"SELECT {SAMPLE_COLUMNS} FROM samples WHERE sample_date > %s ORDER BY sample_date, id"
+    f"SELECT {SAMPLE_COLUMNS} FROM summary_report WHERE `{COLUMN_TIMESTAMP_KEYS}` >%s;"
 )
 
 # Each client has its own thread, so only one at a time may use the file.
@@ -56,7 +56,7 @@ def mark_report_sent(report: dict):
     if not samples:
         return
 
-    newest_sample_date = max(sample["sample_date"] for sample in samples)
+    newest_sample_date = max(sample[COLUMN_TIMESTAMP_KEYS] for sample in samples)
     with _last_report_file_lock:
         previous = _read_last_report_file()
         # Never move backwards, in case two clients' reports finish out of order.

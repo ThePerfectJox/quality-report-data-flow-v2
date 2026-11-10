@@ -1,8 +1,8 @@
 {
-    "PLANT": "RK1",
-    "LOKASI": "U6",
-    "GROUP": 99,
-    "BRAND": "DKM12",
+    "PLANT": "RK2",
+    "LOKASI": "U14",
+    "GROUP": 1,
+    "BRAND": "SAI12",
     "BAGIAN": "Rolling & Cutting",
     "SET_SAMPLE_THRESHOLD": "13:00"
 }
