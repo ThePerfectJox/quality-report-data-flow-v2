@@ -100,16 +100,20 @@ class SetSampleTests(unittest.TestCase):
 
 class ResponseIdTests(unittest.TestCase):
     def test_numbering_continues_on_the_same_date(self):
-        records = response_ids.assign_response_ids([{}, {}], "261106-009", date(2026, 11, 6))
-        self.assertEqual([record["tanggapan_id"] for record in records], ["261106-010", "261106-011"])
+        records = response_ids.assign_response_ids([{}, {}], "261106009", date(2026, 11, 6))
+        self.assertEqual([record["tanggapan_id"] for record in records], ["261106010", "261106011"])
 
     def test_numbering_starts_at_001_on_a_new_date(self):
-        records = response_ids.assign_response_ids([{}], "261105-007", date(2026, 11, 6))
-        self.assertEqual(records[0]["tanggapan_id"], "261106-001")
+        records = response_ids.assign_response_ids([{}], "261105007", date(2026, 11, 6))
+        self.assertEqual(records[0]["tanggapan_id"], "261106001")
+
+    def test_old_hyphenated_last_id_still_continues(self):
+        records = response_ids.assign_response_ids([{}], "261106-009", date(2026, 11, 6))
+        self.assertEqual(records[0]["tanggapan_id"], "261106010")
 
     def test_numbering_starts_at_001_without_a_last_id(self):
         records = response_ids.assign_response_ids([{}], None, date(2026, 11, 6))
-        self.assertEqual(records[0]["tanggapan_id"], "261106-001")
+        self.assertEqual(records[0]["tanggapan_id"], "261106001")
 
 
 class ColumnMappingTests(unittest.TestCase):
@@ -200,8 +204,8 @@ class AppendEndToEndTests(unittest.TestCase):
 
         (self.root / ".env").write_text("REPORT_JSON_PATH=report.json\n", encoding="utf-8")
         self._write_client_config(CLIENT_CONFIG)
-        # The master data's existing row has ID 261106-001.
-        self._write_last_response_id("261106-001")
+        # The master data's existing row has ID 261106001.
+        self._write_last_response_id("261106001")
         second_sample = {**SAMPLE, "ID PPSKT": "319894", "Avg CW [1]": 8.4, "Set Sample": 2}
         self._write_report("2026-11-06T08:16:11.983512+00:00", [SAMPLE, second_sample])
 
@@ -227,7 +231,7 @@ class AppendEndToEndTests(unittest.TestCase):
         sheet.title = "IPC_SKT"
         sheet.append(TABLE_HEADERS)
         existing = dict.fromkeys(TABLE_HEADERS)
-        existing.update({"ID tanggapan": "261106-001", "No ID Pekerja": 111111, "Check": 2})
+        existing.update({"ID tanggapan": "261106001", "No ID Pekerja": 111111, "Check": 2})
         sheet.append([existing[header] for header in TABLE_HEADERS])
         sheet["B2"].number_format = "yyyy-mm-dd"
         last_column = sheet.cell(1, len(TABLE_HEADERS)).column_letter
@@ -282,7 +286,7 @@ class AppendEndToEndTests(unittest.TestCase):
 
         headers = [cell.value for cell in sheet[1]]
         row = dict(zip(headers, (cell.value for cell in sheet[3])))
-        self.assertEqual(row["ID tanggapan"], "261106-002")
+        self.assertEqual(row["ID tanggapan"], "261106002")
         self.assertEqual(row["Tanggal pengiriman"], datetime(2026, 11, 6, 15, 16, 11, 984000))
         self.assertEqual(row["Tanggal Pemeriksaan"], datetime(2026, 11, 6, 7, 41, 59))
         self.assertEqual(row["Plant/Reg"], "RK1")  # From the server's server-config.json.
@@ -301,8 +305,8 @@ class AppendEndToEndTests(unittest.TestCase):
         self.assertIsNone(row["Halaman terakhir"])
         self.assertEqual(row["Check"], "=1+1")
         self.assertEqual(sheet["B3"].number_format, "yyyy-mm-dd")
-        self.assertEqual(sheet["A4"].value, "261106-003")
-        self.assertEqual(self._read_last_response_id(), "261106-003")
+        self.assertEqual(sheet["A4"].value, "261106003")
+        self.assertEqual(self._read_last_response_id(), "261106003")
         second_row = dict(zip(headers, (cell.value for cell in sheet[4])))
         self.assertEqual(second_row["Set Sample"], 2)
 
@@ -394,12 +398,12 @@ class AppendEndToEndTests(unittest.TestCase):
         self.assertEqual(self.workbook_path.read_bytes(), before)
 
     def test_response_ids_continue_after_last_response_file(self):
-        # The master data only has 261106-001, so the IDs must come from the file.
-        self._write_last_response_id("261106-010")
+        # The master data only has 261106001, so the IDs must come from the file.
+        self._write_last_response_id("261106010")
         self._run()
         sheet = load_workbook(self.workbook_path)["IPC_SKT"]
-        self.assertEqual([sheet["A3"].value, sheet["A4"].value], ["261106-011", "261106-012"])
-        self.assertEqual(self._read_last_response_id(), "261106-012")
+        self.assertEqual([sheet["A3"].value, sheet["A4"].value], ["261106011", "261106012"])
+        self.assertEqual(self._read_last_response_id(), "261106012")
 
     def test_second_report_continues_numbering(self):
         self._run()
@@ -407,16 +411,16 @@ class AppendEndToEndTests(unittest.TestCase):
         self._write_report("2026-11-06T09:00:00+00:00", [third_sample])
         self._run()
         sheet = load_workbook(self.workbook_path)["IPC_SKT"]
-        self.assertEqual(sheet["A5"].value, "261106-004")
-        self.assertEqual(self._read_last_response_id(), "261106-004")
+        self.assertEqual(sheet["A5"].value, "261106004")
+        self.assertEqual(self._read_last_response_id(), "261106004")
 
     def test_last_response_file_behind_master_data_is_rejected(self):
-        # Without the file, numbering starts at 261106-001, which the master data already has.
+        # Without the file, numbering starts at 261106001, which the master data already has.
         self.last_response_file.unlink()
         before = self.workbook_path.read_bytes()
         with self.assertRaises(errors.DuplicateRecordError) as context:
             self._run_without_logs()
-        self.assertIn("261106-001", str(context.exception))
+        self.assertIn("261106001", str(context.exception))
         self.assertIn("last-response.json", str(context.exception))
         self.assertEqual(self.workbook_path.read_bytes(), before)
         self.assertFalse(self.last_response_file.exists())

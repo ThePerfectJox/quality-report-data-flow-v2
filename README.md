@@ -133,13 +133,13 @@ Other master data columns stay empty. Every view column is kept in the archive.
 ### Response IDs
 
 Each row gets its `ID tanggapan` while the response is converted, before the master data is
-opened. An ID is the submission date and a counter, such as `261106-001`. The counter
+opened. An ID is the submission date and a counter, `YYMMDD001`, such as `261106001`. The counter
 continues after the last ID in `last-response.json` in the project folder, and starts at 001
 on a new date. After the rows are saved, the file holds the last ID appended:
 
 ```json
 {
-    "last_response_id": "261106-003",
+    "last_response_id": "261106003",
     "saved_at": "2026-11-06T15:16:12+07:00"
 }
 ```

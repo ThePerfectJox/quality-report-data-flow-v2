@@ -1,15 +1,17 @@
 """Creates the response IDs ("ID tanggapan") of the records, and remembers the last one.
 
-An ID is the submission date and a counter: "261106-001", "261106-002", ... The counter
-continues after the last ID in last-response.json when it has the same date, and starts
-at 001 on a new date. The file is updated once the rows are in the master data, so the
-master data never has to be read to number the next report.
+An ID is the submission date and a counter, YYMMDD001: "261106001", "261106002", ... The
+counter continues after the last ID in last-response.json when it has the same date, and
+starts at 001 on a new date. The file is updated once the rows are in the master data, so
+the master data never has to be read to number the next report.
 
 last-response.json:
     {
-        "last_response_id": "261106-003",
+        "last_response_id": "261106003",
         "saved_at": "2026-11-06T15:16:12+07:00"
     }
+
+An older file with a hyphen, such as "261106-003", is still read, and the next ID is 261106004.
 """
 
 import json
@@ -24,7 +26,13 @@ from client.master_data_mapping import RESPONSE_ID_KEY
 LAST_RESPONSE_FILE_NAME = "last-response.json"
 LAST_RESPONSE_ID_KEY = "last_response_id"
 SAVED_AT_KEY = "saved_at"
-RESPONSE_ID_PATTERN = re.compile(r"(\d{6})-(\d{3,})")
+# YYMMDD, then a counter of at least 3 digits. The hyphen is only accepted when reading.
+RESPONSE_ID_PATTERN = re.compile(r"(\d{6})-?(\d{3,})")
+
+
+def format_response_id(submission_date: date, number: int) -> str:
+    """Returns the ID, such as "261106001" for the first record of 6 November 2026."""
+    return f"{submission_date:%y%m%d}{number:03d}"
 
 
 def load_last_response_id(last_response_file: Path) -> str | None:
@@ -34,13 +42,15 @@ def load_last_response_id(last_response_file: Path) -> str | None:
     try:
         values = json.loads(last_response_file.read_text(encoding="utf-8-sig"))
         response_id = values[LAST_RESPONSE_ID_KEY]
+        if isinstance(response_id, int) and not isinstance(response_id, bool):
+            response_id = str(response_id)
         if not isinstance(response_id, str) or RESPONSE_ID_PATTERN.fullmatch(response_id.strip()) is None:
-            raise ValueError(f"{response_id!r} isn't an ID such as \"261106-001\"")
+            raise ValueError(f"{response_id!r} isn't an ID such as \"261106001\"")
     except (OSError, ValueError, KeyError, TypeError) as error:
         # Don't guess: starting again at 001 could reuse IDs that are already in the master data.
         raise ConfigurationError(
             f"{last_response_file} is damaged ({error}). Set {LAST_RESPONSE_ID_KEY} to the "
-            "last ID tanggapan in the master data, such as \"261106-003\"."
+            "last ID tanggapan in the master data, such as \"261106003\"."
         ) from error
     return response_id.strip()
 
@@ -59,7 +69,7 @@ def assign_response_ids(
             last_number = int(match[2])
 
     return [
-        {RESPONSE_ID_KEY: f"{prefix}-{last_number + offset:03d}", **record}
+        {RESPONSE_ID_KEY: format_response_id(submission_date, last_number + offset), **record}
         for offset, record in enumerate(records, start=1)
     ]
 
