@@ -1,5 +1,5 @@
-"""Runs the TCP client: sends a message to the server over TLS, prints its JSON response,
-and appends the report to the Excel database.
+"""Runs the TCP client: sends a message to the server over TLS, and appends the report in
+its JSON response to the Excel master data (see client/append_to_database.py).
 
 Usage: python src/run_client.py [server-ip] [message]
 """
@@ -8,9 +8,9 @@ import sys
 import json
 import logging
 
-from append_data_to_excel_database import (
+from client.append_to_database import (
     AppendDatabaseError,
-    ArchiveCreationError,
+    PostAppendError,
     append_response_to_database,
 )
 from client.tcp_client import ClientBindIpError, send_request
@@ -60,10 +60,10 @@ def main():
 
     try:
         append_response_to_database(response)
-    except ArchiveCreationError as error:
+    except PostAppendError as error:
         sys.exit(str(error))
     except AppendDatabaseError as error:
-        sys.exit(f"Nothing was written to the Excel database: {error}")
+        sys.exit(f"Nothing was written to the Excel master data: {error}")
 
     print("Success...")
     print("Report received, and appended")

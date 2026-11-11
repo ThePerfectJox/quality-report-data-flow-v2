@@ -3,15 +3,24 @@
 from datetime import datetime, timezone
 
 from server.reporting import create_report, mark_report_sent
+from server.server_config import load_server_config
 from shared.settings import REPORT_REQUEST_MESSAGE
 
 
 def handle_client_message(message: str) -> dict:
-    """Returns the data to send to the client as JSON."""
+    """Returns the data to send to the client as JSON.
+
+    A report response also has "server_config": PLANT, LOKASI and BAGIAN from server-config.json.
+    """
     response = {"request": message, "responded_at": datetime.now(timezone.utc)}
     if message != REPORT_REQUEST_MESSAGE:
         return {**response, "status": "error", "message": "Unknown request"}
-    return {**response, "status": "ok", "report": create_report()}
+    return {
+        **response,
+        "status": "ok",
+        "server_config": load_server_config(),
+        "report": create_report(),
+    }
 
 
 def handle_response_sent(message: str, response: dict):

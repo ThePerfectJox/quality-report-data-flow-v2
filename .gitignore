@@ -8,6 +8,10 @@ certs/
 last_report_sent.json
 last_report_sent.json.tmp
 
+# Created while running on the client: the last response ID appended to the master data
+last-response.json
+last-response.json.tmp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

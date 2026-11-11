@@ -10,6 +10,7 @@ import sys
 import time
 
 from server.message_handler import handle_client_message, handle_response_sent
+from server.server_config import ServerConfigError, load_server_config
 from server.tcp_server import TcpServer
 from shared.address import format_address
 from shared.settings import (
@@ -38,6 +39,12 @@ def prepare_tls_context() -> ssl.SSLContext:
 def main():
     # Print any character safely, even if the output is redirected to a limited encoding.
     sys.stdout.reconfigure(errors="backslashreplace")
+
+    # Checked now, so a broken server-config.json is found before any client asks for a report.
+    try:
+        load_server_config()
+    except ServerConfigError as error:
+        sys.exit(f"Could not read the server configuration: {error}")
 
     try:
         tls_context = prepare_tls_context()

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client Config</title>
+<!-- Open with: python src/run_config_editor.py  (the page needs it to read and save the config) -->
+<style>
+  /* Windows Forms look: SystemColors.Control, GroupBox, TextBox, Button, DataGridView, StatusStrip. */
+  :root {
+    --font: Consolas, "Cascadia Mono", "Lucida Console", "Courier New", monospace;
+    --control: #f0f0f0;
+    --control-text: #000000;
+    --gray-text: #6d6d6d;
+    --window: #ffffff;
+    --groupbox-border: #dcdcdc;
+    --textbox-border: #7a7a7a;
+    --focus: #0078d7;
+    --button: #e1e1e1;
+    --button-border: #adadad;
+    --button-hover: #e5f1fb;
+    --button-pressed: #cce4f7;
+    --button-pressed-border: #005499;
+    --grid-line: #d5d5d5;
+    --grid-border: #a0a0a0;
+    --selection: #0078d7;
+    --error-text: #c00000;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--control);
+    color: var(--control-text);
+    font: 13px/1.35 var(--font);
+    cursor: default;
+  }
+  button, input { font: inherit; color: inherit; }
+
+  .form { max-width: 880px; padding: 10px 12px 40px; }
+
+  /* GroupBox */
+  fieldset {
+    margin: 0 0 10px;
+    padding: 8px 10px 10px;
+    border: 1px solid var(--groupbox-border);
+    border-radius: 0;
+  }
+  legend { padding: 0 3px; margin-left: 3px; }
+
+  /* TableLayoutPanel: label column + control column */
+  .layout {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    row-gap: 6px;
+    column-gap: 6px;
+  }
+  .layout label { white-space: nowrap; }
+  .line { display: flex; gap: 6px; align-items: center; }
+  .grow { flex: 1; min-width: 0; }
+  .note { color: var(--gray-text); }
+  .error-label { color: var(--error-text); }
+  .path-label { overflow-wrap: anywhere; }
+
+  /* TextBox */
+  input[type="text"] {
+    height: 23px;
+    padding: 1px 4px;
+    border: 1px solid var(--textbox-border);
+    border-radius: 0;
+    background: var(--window);
+    outline: none;
+  }
+  input[type="text"]:hover { border-color: #171717; }
+  input[type="text"]:focus { border-color: var(--focus); }
+  input[type="text"]:disabled { background: var(--control); border-color: #cccccc; color: var(--gray-text); }
+  .short { width: 220px; }
+
+  /* Button */
+  button {
+    min-width: 75px;
+    height: 23px;
+    padding: 0 10px;
+    border: 1px solid var(--button-border);
+    border-radius: 0;
+    background: var(--button);
+    white-space: nowrap;
+  }
+  button:hover { background: var(--button-hover); border-color: var(--focus); }
+  button:active { background: var(--button-pressed); border-color: var(--button-pressed-border); }
+  button:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+  button.default { border-color: var(--focus); box-shadow: inset 0 0 0 1px var(--focus); }
+  button:disabled {
+    background: #cccccc; border-color: #bfbfbf; color: #838383; box-shadow: none;
+  }
+  .buttons { display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px; }
+  .buttons .left { margin-right: auto; display: flex; gap: 6px; }
+
+  /* DataGridView */
+  .grid-box {
+    background: var(--window);
+    border: 1px solid var(--grid-border);
+    min-height: 120px;
+    overflow-x: auto;
+  }
+  table.grid { border-collapse: collapse; width: 100%; }
+  .grid th, .grid td { border: 1px solid var(--grid-line); padding: 0; height: 23px; }
+  .grid thead th {
+    background: var(--window);
+    font-weight: normal;
+    text-align: left;
+    padding: 2px 5px;
+    white-space: nowrap;
+    border-top: none;
+  }
+  .grid thead th:first-child, .grid tbody th { border-left: none; }
+  .grid th.row-header {
+    width: 22px;
+    min-width: 22px;
+    background: var(--window);
+    text-align: center;
+    font-size: 10px;
+  }
+  .grid tbody tr.current th.row-header::before { content: "\25B6"; }
+  .grid td input {
+    width: 100%;
+    height: 22px;
+    padding: 1px 5px;
+    border: none;
+    background: transparent;
+    outline: none;
+  }
+  .grid td.number input { text-align: right; }
+  .grid td:focus-within { outline: 1px dotted #000; outline-offset: -2px; }
+  .grid tbody tr.current td { background: #e8f2fc; }
+  .grid td.invalid, .grid tbody tr.current td.invalid { background: #ffe0e0; }
+  .grid .brand-column { width: 120px; }
+  .range-line { margin-top: 6px; min-height: 18px; }
+
+  /* StatusStrip */
+  .status-strip {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    background: var(--control);
+    border-top: 1px solid #d7d7d7;
+  }
+  .status-strip span { padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .status-strip .spring { flex: 1; }
+  .status-strip .file { color: var(--gray-text); border-left: 1px solid #d7d7d7; }
+
+  /* MessageBox */
+  dialog.message-box {
+    padding: 0;
+    width: 440px;
+    max-width: calc(100vw - 40px);
+    border: 1px solid #8a8a8a;
+    background: var(--window);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  }
+  dialog.message-box::backdrop { background: transparent; }
+  .message-box .title-bar {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    padding-left: 10px;
+    background: var(--window);
+  }
+  .message-box .title-bar span { flex: 1; }
+  .message-box .title-bar button {
+    min-width: 46px; height: 30px; border: none; background: transparent; padding: 0;
+  }
+  .message-box .title-bar button:hover { background: #e81123; color: #fff; }
+  .message-box .body {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px 22px;
+    overflow-wrap: anywhere;
+  }
+  .message-box .body svg { flex: none; }
+  #message-text { white-space: pre-line; }
+  .message-box .footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 10px 12px;
+    background: var(--control);
+  }
+</style>
+</head>
+<body>
+<div class="form">
+
+  <fieldset id="master-section">
+    <legend id="master-legend">Master data</legend>
+    <div class="layout">
+      <label for="excel-path">Workbook:</label>
+      <div class="line">
+        <input class="grow" type="text" id="excel-path" spellcheck="false" autocomplete="off">
+        <button type="button" id="browse-button">Browse...</button>
+      </div>
+
+      <span></span>
+      <span id="file-status" class="path-label"></span>
+
+      <label for="sheet-name">Worksheet:</label>
+      <div><input class="short" type="text" id="sheet-name" spellcheck="false" autocomplete="off"></div>
+
+      <label for="table-name">Excel Table:</label>
+      <div><input class="short" type="text" id="table-name" spellcheck="false" autocomplete="off"></div>
+
+      <span></span>
+      <span class="note">Worksheet and Excel Table may be empty if the workbook has one Excel Table.
+        Archives are saved in an archived-&lt;PLANT&gt; folder next to the workbook.</span>
+    </div>
+    <div class="buttons">
+      <button type="button" class="default" id="save-master">Save</button>
+    </div>
+  </fieldset>
+
+  <fieldset id="inspec-section">
+    <legend id="inspec-legend">Inspec requirements</legend>
+    <div class="grid-box">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th class="row-header"></th>
+            <th class="brand-column">Brand</th>
+            <th>CW Target</th>
+            <th>CW Tol.</th>
+            <th>ME Target</th>
+            <th>ME Tol.</th>
+            <th>BE Target</th>
+            <th>BE Tol.</th>
+          </tr>
+        </thead>
+        <tbody id="inspec-rows"></tbody>
+      </table>
+    </div>
+    <div class="range-line" id="range-line"></div>
+    <div class="note">The brand is the group name up to the first "-": group SAI-2 uses brand SAI.</div>
+    <div class="buttons">
+      <div class="left">
+        <button type="button" id="add-brand">Add</button>
+        <button type="button" id="remove-brand" disabled>Remove</button>
+      </div>
+      <button type="button" class="default" id="save-inspec">Save</button>
+    </div>
+  </fieldset>
+
+</div>
+
+<div class="status-strip">
+  <span id="status-text">Loading...</span>
+  <span class="spring"></span>
+  <span class="file" id="config-file">config/client-config.json</span>
+</div>
+
+<dialog class="message-box" id="message-box">
+  <div class="title-bar">
+    <span>Client Config</span>
+    <button type="button" aria-label="Close" data-close>&#x2715;</button>
+  </div>
+  <div class="body">
+    <span id="message-icon"></span>
+    <span id="message-text"></span>
+  </div>
+  <div class="footer">
+    <button type="button" class="default" data-close>OK</button>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+
+const MEASUREMENTS = ["CW", "ME", "BE"];
+const API = {
+  config: "/api/client-config",
+  saveMasterData: "/api/client-config/master-data",
+  saveInspec: "/api/client-config/inspec-requirements",
+  browse: "/api/browse-excel",
+};
+const ICONS = {
+  error: '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#e81123"/><path d="M10.5 10.5l11 11M21.5 10.5l-11 11" stroke="#fff" stroke-width="2.4"/></svg>',
+  warning: '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2L31 29H1z" fill="#ffc83d" stroke="#c19400"/><path d="M16 11v10" stroke="#000" stroke-width="2.6"/><circle cx="16" cy="25" r="1.6"/></svg>',
+  info: '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#0078d7"/><path d="M16 14v10" stroke="#fff" stroke-width="2.6"/><circle cx="16" cy="9.5" r="1.7" fill="#fff"/></svg>',
+};
+
+const element = (id) => document.getElementById(id);
+const masterInputs = {
+  EXCEL_PATH: element("excel-path"),
+  SHEET_NAME: element("sheet-name"),
+  TABLE_NAME: element("table-name"),
+};
+const sections = {
+  master: { legend: element("master-legend"), name: "Master data", unsaved: false },
+  inspec: { legend: element("inspec-legend"), name: "Inspec requirements", unsaved: false },
+};
+let currentRow = null;
+
+// region HELPERS
+function setStatus(text) {
+  element("status-text").textContent = text;
+}
+
+// Like MessageBox.Show: the icons come from ICONS, the text is set as plain text.
+function showMessageBox(text, kind = "error") {
+  const box = element("message-box");
+  element("message-icon").innerHTML = ICONS[kind];
+  element("message-text").textContent = text;
+  if (!box.open) box.showModal();
+  box.querySelector(".footer button").focus();
+}
+
+function setUnsaved(sectionKey, unsaved) {
+  const section = sections[sectionKey];
+  section.unsaved = unsaved;
+  section.legend.textContent = unsaved ? `${section.name} *` : section.name;
+  const anyUnsaved = Object.values(sections).some((item) => item.unsaved);
+  document.title = anyUnsaved ? "Client Config *" : "Client Config";
+}
+
+function disableAll() {
+  document.querySelectorAll(".form button, .form input").forEach((control) => { control.disabled = true; });
+}
+
+function timeNow() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+async function callApi(path, body) {
+  const options = body === undefined ? {} : {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+  let response;
+  try {
+    response = await fetch(path, options);
+  } catch (error) {
+    throw new Error("The config editor isn't running. Start it again with run.bat, option 3.");
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(`Unexpected answer from the config editor (HTTP ${response.status}).`);
+  }
+  if (!data.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+}
+
+// Empty or invalid cells are sent as null, so the server's message names the field.
+function readNumber(input) {
+  const text = input.value.trim().replace(",", ".");
+  if (text === "") return null;
+  const number = Number(text);
+  return Number.isFinite(number) ? number : null;
+}
+
+function formatNumber(value) {
+  return String(Math.round(value * 10000) / 10000);
+}
+// endregion
+
+// region MASTER DATA
+function showFileStatus(status) {
+  const label = element("file-status");
+  label.className = "path-label";
+  if (status.problem) {
+    label.textContent = status.problem;
+    label.classList.add("error-label");
+  } else if (status.found) {
+    label.textContent = "File found.";
+    label.classList.add("note");
+  } else if (status.resolved_path) {
+    label.textContent = `File not found: ${status.resolved_path}`;
+    label.classList.add("error-label");
+  } else {
+    label.textContent = "";
+  }
+}
+
+function fillMasterData(values) {
+  for (const [key, input] of Object.entries(masterInputs)) input.value = values[key] || "";
+}
+
+async function saveMasterData() {
+  setStatus("Saving master data...");
+  const body = {};
+  for (const [key, input] of Object.entries(masterInputs)) body[key] = input.value;
+  try {
+    const result = await callApi(API.saveMasterData, body);
+    setUnsaved("master", false);
+    setStatus(`Master data saved at ${timeNow()}.`);
+    const state = await callApi(API.config);
+    fillMasterData(state.master_data);
+    showFileStatus(state.master_data_status);
+    if (result.warnings && result.warnings.length) showMessageBox(result.warnings.join("\n\n"), "warning");
+  } catch (error) {
+    setStatus("Master data not saved.");
+    showMessageBox(error.message, "error");
+  }
+}
+
+async function browseForWorkbook() {
+  setStatus("Select the workbook in the dialog...");
+  try {
+    const result = await callApi(API.browse, { current_path: masterInputs.EXCEL_PATH.value });
+    if (result.path) {
+      masterInputs.EXCEL_PATH.value = result.path;
+      setUnsaved("master", true);
+      setStatus("Workbook selected. Click Save to keep it.");
+    } else {
+      setStatus("Ready");
+    }
+  } catch (error) {
+    setStatus("Ready");
+    showMessageBox(error.message, "error");
+  }
+}
+// endregion
+
+// region INSPEC REQUIREMENTS (DataGridView)
+function makeCell(value, label, isNumber) {
+  const cell = document.createElement("td");
+  if (isNumber) cell.className = "number";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = value ?? "";
+  input.spellcheck = false;
+  input.autocomplete = "off";
+  input.setAttribute("aria-label", label);
+  if (isNumber) input.inputMode = "decimal";
+  cell.append(input);
+  return cell;
+}
+
+function addBrandRow(brand = "", requirement = {}) {
+  const row = document.createElement("tr");
+  const header = document.createElement("th");
+  header.className = "row-header";
+  row.append(header);
+
+  const brandCell = makeCell(brand, "Brand", false);
+  brandCell.dataset.field = "BRAND";
+  row.append(brandCell);
+  for (const measurement of MEASUREMENTS) {
+    for (const prefix of ["TARGET", "TOLERANCE"]) {
+      const field = `${prefix}_${measurement}`;
+      const cell = makeCell(requirement[field], `${measurement} ${prefix.toLowerCase()}`, true);
+      cell.dataset.field = field;
+      row.append(cell);
+    }
+  }
+  row.addEventListener("focusin", () => selectRow(row));
+  row.addEventListener("mousedown", (event) => {
+    if (event.target === header) { selectRow(row); event.preventDefault(); }
+  });
+  element("inspec-rows").append(row);
+  validateRow(row);
+  return row;
+}
+
+function selectRow(row) {
+  if (currentRow) currentRow.classList.remove("current");
+  currentRow = row;
+  if (row) row.classList.add("current");
+  element("remove-brand").disabled = !row;
+  showRanges();
+}
+
+function validateRow(row) {
+  for (const cell of row.querySelectorAll("td.number")) {
+    const value = readNumber(cell.querySelector("input"));
+    const isTolerance = cell.dataset.field.startsWith("TOLERANCE");
+    cell.classList.toggle("invalid", value === null || (isTolerance && value < 0));
+  }
+  const brandCell = row.querySelector('td[data-field="BRAND"]');
+  const brand = brandCell.querySelector("input").value.trim();
+  brandCell.classList.toggle("invalid", brand === "" || brand.includes("-"));
+}
+
+function cellValue(row, field) {
+  return readNumber(row.querySelector(`td[data-field="${field}"] input`));
+}
+
+function showRanges() {
+  const line = element("range-line");
+  if (!currentRow) { line.textContent = ""; return; }
+  const brand = currentRow.querySelector('td[data-field="BRAND"] input').value.trim() || "(no brand)";
+  const parts = MEASUREMENTS.map((measurement) => {
+    const target = cellValue(currentRow, `TARGET_${measurement}`);
+    const tolerance = cellValue(currentRow, `TOLERANCE_${measurement}`);
+    if (target === null || tolerance === null || tolerance < 0) return `${measurement} -`;
+    return `${measurement} ${formatNumber(target - tolerance)} - ${formatNumber(target + tolerance)}`;
+  });
+  line.textContent = `In spec for ${brand}:  ${parts.join("   ")}`;
+}
+
+function removeSelectedRow() {
+  if (!currentRow) return;
+  const next = currentRow.nextElementSibling || currentRow.previousElementSibling;
+  currentRow.remove();
+  selectRow(null);
+  setUnsaved("inspec", true);
+  if (next) next.querySelector("input").focus();
+}
+
+function fillInspecRequirements(requirements) {
+  element("inspec-rows").replaceChildren();
+  selectRow(null);
+  for (const [brand, requirement] of Object.entries(requirements || {})) {
+    addBrandRow(brand, requirement && typeof requirement === "object" ? requirement : {});
+  }
+}
+
+function readInspecRequirements() {
+  const requirements = {};
+  for (const row of element("inspec-rows").querySelectorAll("tr")) {
+    const brand = row.querySelector('td[data-field="BRAND"] input').value.trim();
+    const requirement = {};
+    for (const cell of row.querySelectorAll("td.number")) {
+      requirement[cell.dataset.field] = readNumber(cell.querySelector("input"));
+    }
+    if (brand in requirements) throw new Error(`The brand ${brand} is in the list twice.`);
+    requirements[brand] = requirement;
+  }
+  return requirements;
+}
+
+async function saveInspecRequirements() {
+  setStatus("Saving inspec requirements...");
+  try {
+    const result = await callApi(API.saveInspec, { INSPEC_REQUIREMENTS: readInspecRequirements() });
+    setUnsaved("inspec", false);
+    setStatus(`${result.message} (${timeNow()})`);
+  } catch (error) {
+    setStatus("Inspec requirements not saved.");
+    showMessageBox(error.message, "error");
+  }
+}
+// endregion
+
+// region START
+async function start() {
+  document.querySelectorAll("#message-box [data-close]").forEach((button) => {
+    button.addEventListener("click", () => element("message-box").close());
+  });
+
+  if (location.protocol === "file:") {
+    disableAll();
+    setStatus("Not connected.");
+    showMessageBox(
+      "This page can't read or save the config when opened directly. " +
+      "Double-click run.bat and choose 3, Config editor.",
+      "warning",
+    );
+    return;
+  }
+
+  let state;
+  try {
+    state = await callApi(API.config);
+  } catch (error) {
+    disableAll();
+    setStatus("Not loaded.");
+    showMessageBox(`${error.message}\n\nFix the file by hand, then reload this page.`, "error");
+    return;
+  }
+
+  element("config-file").textContent = state.config_file;
+  fillMasterData(state.master_data);
+  showFileStatus(state.master_data_status);
+  fillInspecRequirements(state.inspec_requirements);
+  setStatus(state.exists ? "Ready" : `${state.config_file} doesn't exist yet. Saving a section creates it.`);
+  if (state.inspec_problem) showMessageBox(state.inspec_problem, "warning");
+
+  element("master-section").addEventListener("input", () => setUnsaved("master", true));
+  element("inspec-section").addEventListener("input", (event) => {
+    setUnsaved("inspec", true);
+    const row = event.target.closest("tr");
+    if (row) { validateRow(row); showRanges(); }
+  });
+  element("save-master").addEventListener("click", saveMasterData);
+  element("browse-button").addEventListener("click", browseForWorkbook);
+  element("save-inspec").addEventListener("click", saveInspecRequirements);
+  element("add-brand").addEventListener("click", () => {
+    const row = addBrandRow();
+    setUnsaved("inspec", true);
+    row.querySelector("input").focus();
+  });
+  element("remove-brand").addEventListener("click", removeSelectedRow);
+
+  window.addEventListener("beforeunload", (event) => {
+    if (Object.values(sections).some((item) => item.unsaved)) event.preventDefault();
+  });
+}
+
+start();
+// endregion
+</script>
+</body>
+</html>
