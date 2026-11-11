@@ -35,6 +35,7 @@ TABLE_HEADERS = [
     "Set Sample",
     "Bagian",
     *mapping.REPORT_TO_MASTER_COLUMNS.values(),
+    "Total VFI Cig.",
     "Avg. CW",
     "Avg. Dia. BE",
     "Avg. Dia. ME",
@@ -299,6 +300,7 @@ class AppendEndToEndTests(unittest.TestCase):
         self.assertEqual(row["Set Sample"], 1)
         self.assertEqual(row["VFI NC LV"], 2)  # "2.00" from the view becomes a number.
         self.assertEqual(row["VFI NC Incompletely Filled"], 0)
+        self.assertEqual(row["Total VFI Cig."], 2)  # Only Loose / Void is 2; the others are 0.
         self.assertAlmostEqual(row["Avg. CW"], (6.06 / 3 + 8.1 / 3) / 2)
         self.assertAlmostEqual(row["%In Spec CW"], 0.5)  # 2.02 is in spec, 2.70 isn't.
         self.assertAlmostEqual(row["%In Spec Dia. BE"], 2 / 6)  # 9.93 and 10.0 are within 10 +/- 0.25.
@@ -431,6 +433,18 @@ class AppendEndToEndTests(unittest.TestCase):
         with self.assertRaises(errors.ConfigurationError):
             self._run_without_logs()
         self.assertEqual(self.workbook_path.read_bytes(), before)
+
+    def test_total_vfi_cig_is_the_sum_of_all_defect_counts(self):
+        counts = {column: number for number, column in enumerate(mapping.REPORT_TO_MASTER_COLUMNS, start=1)}
+        # Text from MySQL, an empty count and a non-number are handled like the view gives them.
+        counts.update({"Loose / Void": "1.00", "Wrinkled": None, "TPIS": "x"})
+        expected = sum(range(1, 23)) - 2 - 7  # Wrinkled (2) and TPIS (7) are left out.
+        self._write_report("2026-11-06T08:16:11+00:00", [{**SAMPLE, **counts}])
+        self._run()
+        sheet = load_workbook(self.workbook_path)["IPC_SKT"]
+        row = dict(zip((cell.value for cell in sheet[1]), (cell.value for cell in sheet[3])))
+        self.assertEqual(row["Total VFI Cig."], expected)
+        self.assertEqual(len(mapping.REPORT_TO_MASTER_COLUMNS), 22)
 
     def test_sample_with_empty_set_sample_is_rejected(self):
         self._write_report("2026-11-06T08:16:11+00:00", [{**SAMPLE, "Set Sample": None}])

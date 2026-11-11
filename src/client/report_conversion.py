@@ -51,6 +51,7 @@ from client.master_data_mapping import (
     SOURCE_START_KEY,
     SOURCE_WORKER_ID_KEY,
     SUBMITTED_AT_KEY,
+    TOTAL_VFI_CIG_KEY,
     WORKER_ID_KEY,
 )
 from client.response_ids import assign_response_ids
@@ -353,6 +354,8 @@ def calculate_derived_data(
     - In Spec Cw, Be and Me: from client/inspec.py, with the brand's requirement.
     - Set Sample: the view's "Set Sample".
     - Defect counts: numbers stay numbers, so "2.00" from MySQL becomes 2.
+    - Total VFI Cig: the sum of the defect counts in REPORT_TO_MASTER_COLUMNS. A count
+      that's empty or isn't a number is left out of the sum.
     Missing values are left out of averages and fractions. If all are missing, the result
     is None.
     """
@@ -374,6 +377,7 @@ def calculate_derived_data(
     cw_values = [avg_cw_first, avg_cw_second]
     be_values = [numeric(key) for key in BE_SOURCE_KEYS]
     me_values = [numeric(key) for key in ME_SOURCE_KEYS]
+    defect_counts = [numeric(key) for key in DEFECT_SOURCE_KEYS]
 
     return {
         INSPECTED_AT_KEY: parse_inspection_datetime(
@@ -390,7 +394,20 @@ def calculate_derived_data(
         "avg_dia_me": safe_mean(me_values),
         **calculate_inspec(cw_values, me_values, be_values, inspec),
         **{key: to_number_or_text(input_data.get(key)) for key in DEFECT_SOURCE_KEYS},
+        TOTAL_VFI_CIG_KEY: calculate_total(defect_counts),
     }
+
+
+def calculate_total(values: list[float | None]) -> int | float | None:
+    """Returns the sum of the values that aren't missing, or None if all are missing.
+
+    A whole-number total is returned as an int, so Excel shows 3, not 3.0.
+    """
+    numbers = [value for value in values if value is not None]
+    if not numbers:
+        return None
+    total = sum(numbers)
+    return int(total) if float(total).is_integer() else total
 
 
 def build_metadata(server_config: ServerConfig, submission_datetime: datetime) -> dict[str, Any]:

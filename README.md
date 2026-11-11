@@ -127,6 +127,7 @@ from the report is appended, and the error names the brand to add.
 
 - `REPORT_TO_MASTER_COLUMNS`: view columns copied as they are, such as `Loose / Void` to `VFI NC LV`.
 - `CALCULATED_TO_MASTER_COLUMNS`: calculated and metadata values, such as `avg_cw` to `Avg. CW`.
+  `Total VFI Cig.` is the sum of all the defect counts in `REPORT_TO_MASTER_COLUMNS`.
 
 Other master data columns stay empty. Every view column is kept in the archive.
 

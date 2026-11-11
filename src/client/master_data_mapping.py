@@ -70,6 +70,8 @@ BRAND_KEY = "brand"  # From the view's "Nama Group / Cell": "SAI-2" gives "SAI".
 PLANT_KEY = "plant"  # From server-config.json on the server, sent in each response.
 LOKASI_KEY = "lokasi"  # From server-config.json.
 BAGIAN_KEY = "bagian"  # From server-config.json.
+# The sum of every defect count in REPORT_TO_MASTER_COLUMNS.
+TOTAL_VFI_CIG_KEY = "total_vfi_cig"
 
 CALCULATED_TO_MASTER_COLUMNS = {
     RESPONSE_ID_KEY: "ID tanggapan",
@@ -88,6 +90,7 @@ CALCULATED_TO_MASTER_COLUMNS = {
     "in_spec_cw": "%In Spec CW",
     "in_spec_be": "%In Spec Dia. BE",
     "in_spec_me": "%In Spec Dia. ME",
+    TOTAL_VFI_CIG_KEY: "Total VFI Cig.",
 }
 
 # Column names of the calculated and metadata fields in the archive workbook.
@@ -111,6 +114,7 @@ ARCHIVE_FIELD_LABELS = {
     "in_spec_cw": "In Spec Cw",
     "in_spec_be": "In Spec Be",
     "in_spec_me": "In Spec Me",
+    TOTAL_VFI_CIG_KEY: "Total VFI Cig",
 }
 # endregion
 
