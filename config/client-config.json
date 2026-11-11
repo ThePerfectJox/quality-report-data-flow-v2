@@ -9,9 +9,9 @@
             "TARGET_CW": 2.02,
             "TOLERANCE_CW": 0.14,
             "TARGET_ME": 8.0,
-            "TOLERANCE_ME": 0.25,
+            "TOLERANCE_ME": 0.2,
             "TARGET_BE": 10.0,
-            "TOLERANCE_BE": 0.25
+            "TOLERANCE_BE": 0.2
         },
         "DSS": {
             "TARGET_CW": 2.02,
